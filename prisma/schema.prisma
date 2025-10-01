@@ -30,16 +30,24 @@ model User {
 }
 
 model Transaction {
-  id                           Int    @id @default(autoincrement())
-  user                         User   @relation(fields: [user_id], references: [id])
-  user_id                      Int
-  name_product_transaction     String
-  price_product_transaction    Int
-  quantity_product_transaction Int
-  point_transaction            Int    @default(0)
+  id                Int               @id @default(autoincrement())
+  user              User              @relation(fields: [user_id], references: [id])
+  user_id           Int
+  items             TransactionItem[]
+  point_transaction Int               @default(0)
+  type              String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model TransactionItem {
+  id                           Int         @id @default(autoincrement())
+  transaction                  Transaction @relation(fields: [transaction_id], references: [id])
+  transaction_id               Int
+  name_product_transaction     String
+  price_product_transaction    Int
+  quantity_product_transaction Int
 }
 
 model Point {
@@ -81,6 +89,7 @@ model ProductPromo {
   discount            Int
   product_description String?
   product_category    String
+  product_point       Int
   start_date          DateTime
   end_date            DateTime
   stock               Int      @default(0)

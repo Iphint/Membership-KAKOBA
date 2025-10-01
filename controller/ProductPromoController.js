@@ -11,6 +11,7 @@ exports.createProductPromo = async (req, res) => {
       "price_normal",
       "discount",
       "product_category",
+      "point",
       "product_description",
       "start_date",
       "end_date",

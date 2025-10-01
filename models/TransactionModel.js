@@ -1,26 +1,28 @@
-const { PrismaClient } = require('@prisma/client');
-const { get } = require('../routes/TransactionRoutes');
-const redisClient = require('../config/Redis');
+const { PrismaClient } = require("@prisma/client");
+const { get } = require("../routes/TransactionRoutes");
+const redisClient = require("../config/Redis");
 const prisma = new PrismaClient();
 
 const TransactionModel = {
-  createTransaction: async (
-    user_id,
-    name_product_transaction,
-    price_product_transaction,
-    quantity_product_transaction,
-    point_transaction
-  ) => {
+  createTransaction: async (user_id, items, point_transaction, type) => {
     try {
       const result = await prisma.$transaction(async (tx) => {
         // 1. Simpan transaksi
         const transaction = await tx.transaction.create({
           data: {
             user_id: parseInt(user_id),
-            name_product_transaction,
-            price_product_transaction,
-            quantity_product_transaction,
             point_transaction,
+            type,
+            items: {
+              create: items.map((item) => ({
+                name_product_transaction: item.name_product_transaction,
+                price_product_transaction: item.price_product_transaction,
+                quantity_product_transaction: item.quantity_product_transaction,
+              })),
+            },
+          },
+          include: {
+            items: true,
           },
         });
 
@@ -52,7 +54,7 @@ const TransactionModel = {
         return transaction;
       });
 
-      const cacheKeyToInvalidate = 'all_transactions_with_users';
+      const cacheKeyToInvalidate = "all_transactions_with_users";
       await redisClient.del(cacheKeyToInvalidate);
       console.log(
         `Cache "${cacheKeyToInvalidate}" dihapus setelah transaksi baru dibuat.`
@@ -60,22 +62,23 @@ const TransactionModel = {
 
       return result;
     } catch (error) {
-      console.error('Error creating transaction and adding points:', error);
+      console.error("Error creating transaction and adding points:", error);
       throw error;
     }
   },
   getAllTransactions: async () => {
-    const cacheKey = 'all_transactions_with_users';
-    const CACHE_EXPIRATION_TIME = 60 * 5;
+    const cacheKey = "all_transactions_with_users";
+    const CACHE_EXPIRATION_TIME = 60 * 2;
     try {
       const canchedTransactions = await redisClient.get(cacheKey);
       if (canchedTransactions) {
-        console.log('Mengambil semua transaksi dari cache Redis.');
+        console.log("Mengambil semua transaksi dari cache Redis.");
         return JSON.parse(canchedTransactions);
       }
       const transactions = await prisma.transaction.findMany({
         include: {
           user: true,
+          items: true,
         },
       });
       await redisClient.setex(
@@ -86,10 +89,10 @@ const TransactionModel = {
       console.log(
         `Semua transaksi disimpan ke Redis dengan masa berlaku ${CACHE_EXPIRATION_TIME} detik.`
       );
-      console.log('Mengambil semua transaksi dari database.');
+      console.log("Mengambil semua transaksi dari database.");
       return transactions;
     } catch (error) {
-      console.error('Error fetching transactions:', error);
+      console.error("Error fetching transactions:", error);
       throw error;
     }
   },
@@ -103,7 +106,7 @@ const TransactionModel = {
       });
       return transaction;
     } catch (error) {
-      console.error('Error fetching transaction by ID:', error);
+      console.error("Error fetching transaction by ID:", error);
       throw error;
     }
   },
@@ -113,11 +116,12 @@ const TransactionModel = {
         where: { user_id: parseInt(user_id) },
         include: {
           user: true,
+          items: true,
         },
       });
       return transactions;
     } catch (error) {
-      console.error('Error fetching transactions by user ID:', error);
+      console.error("Error fetching transactions by user ID:", error);
       throw error;
     }
   },
@@ -127,14 +131,14 @@ const TransactionModel = {
         where: { id: parseInt(id) },
         data,
       });
-      const cacheKeyToInvalidate = 'all_transactions_with_users';
+      const cacheKeyToInvalidate = "all_transactions_with_users";
       await redisClient.del(cacheKeyToInvalidate);
       console.log(
         `Cache "${cacheKeyToInvalidate}" dihapus setelah transaksi updated dibuat.`
       );
       return updatedTransaction;
     } catch (error) {
-      console.error('Error updating transaction:', error);
+      console.error("Error updating transaction:", error);
       throw error;
     }
   },
@@ -143,28 +147,28 @@ const TransactionModel = {
       const deletedTransaction = await prisma.transaction.delete({
         where: { id: parseInt(id) },
       });
-      const cacheKeyToInvalidate = 'all_transactions_with_users';
+      const cacheKeyToInvalidate = "all_transactions_with_users";
       await redisClient.del(cacheKeyToInvalidate);
       console.log(
         `Cache "${cacheKeyToInvalidate}" dihapus setelah transaksi single delete dibuat.`
       );
       return deletedTransaction;
     } catch (error) {
-      console.error('Error deleting transaction:', error);
+      console.error("Error deleting transaction:", error);
       throw error;
     }
   },
   deleteAllTransactions: async () => {
     try {
       const deletedTransactions = await prisma.transaction.deleteMany();
-      const cacheKeyToInvalidate = 'all_transactions_with_users';
+      const cacheKeyToInvalidate = "all_transactions_with_users";
       await redisClient.del(cacheKeyToInvalidate);
       console.log(
         `Cache "${cacheKeyToInvalidate}" dihapus setelah transaksi delete all dibuat.`
       );
       return deletedTransactions;
     } catch (error) {
-      console.error('Error deleting all transactions:', error);
+      console.error("Error deleting all transactions:", error);
       throw error;
     }
   },

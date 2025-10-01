@@ -13,6 +13,7 @@ const ProductPromoRoutes = require("./routes/ProductPromoRoutes");
 const PointsRoutes = require("./routes/PointsRoutes");
 const EventsRoutes = require("./routes/EventsRoutes");
 const path = require("path");
+const { timeStamp } = require("console");
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -29,6 +30,18 @@ app.use(
   EventsRoutes
 );
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+app.get("/api/test", (req, res) => {
+  console.log("====================================");
+  console.log("test okeei");
+  console.log("====================================");
+
+  res.status(200).json({
+    success: true,
+    message: "Backend success connected",
+    timeStamp: new Date().toString(),
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

@@ -1,7 +1,7 @@
-const { PrismaClient } = require('@prisma/client');
-const { get } = require('../routes/UserRoutes');
-const fs = require('fs');
-const path = require('path');
+const { PrismaClient } = require("@prisma/client");
+const { get } = require("../routes/UserRoutes");
+const fs = require("fs");
+const path = require("path");
 const prisma = new PrismaClient();
 
 const UserModel = {
@@ -24,9 +24,15 @@ const UserModel = {
           profile_picture: profile_picture || null,
         },
       });
+      await prisma.point.create({
+        data: {
+          user_id: user.id,
+          point_balance: 0,
+        },
+      });
       return user;
     } catch (error) {
-      console.error('Error creating user:', error);
+      console.error("Error creating user:", error);
       throw error;
     }
   },
@@ -37,7 +43,7 @@ const UserModel = {
       });
       return user;
     } catch (error) {
-      console.error('Error finding user by username:', error);
+      console.error("Error finding user by username:", error);
       throw error;
     }
   },
@@ -50,10 +56,13 @@ const UserModel = {
     try {
       const user = await prisma.user.findUnique({
         where: { id },
+        include: {
+          Point: true,
+        },
       });
       return user;
     } catch (error) {
-      console.error('Error finding user by ID:', error);
+      console.error("Error finding user by ID:", error);
       throw error;
     }
   },
@@ -64,7 +73,7 @@ const UserModel = {
         where: { id: parsedId },
       });
       if (!existingUser) {
-        throw new Error('User not found');
+        throw new Error("User not found");
       }
       // Jika ada file baru, hapus file lama
       if (newFile) {
@@ -73,7 +82,7 @@ const UserModel = {
         if (oldProfilePicture) {
           const oldImagePath = path.join(
             process.cwd(),
-            'uploads',
+            "uploads",
             oldProfilePicture
           );
 
@@ -82,10 +91,10 @@ const UserModel = {
               fs.unlinkSync(oldImagePath);
               console.log(`Deleted old profile picture: ${oldImagePath}`);
             } catch (err) {
-              console.error('Error deleting old profile picture:', err);
+              console.error("Error deleting old profile picture:", err);
             }
           } else {
-            console.log('Old profile picture not found at:', oldImagePath);
+            console.log("Old profile picture not found at:", oldImagePath);
           }
         }
         data.profile_picture = newFile.filename;
@@ -97,18 +106,22 @@ const UserModel = {
       });
       return updatedUser;
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error("Error updating user:", error);
       throw error;
     }
   },
   deleteUser: async (id) => {
     try {
+      await prisma.point.deleteMany({
+        where: { user_id: id },
+      });
       const deletedUser = await prisma.user.delete({
         where: { id },
       });
+
       return deletedUser;
     } catch (error) {
-      console.error('Error deleting user:', error);
+      console.error("Error deleting user:", error);
       throw error;
     }
   },
@@ -117,7 +130,7 @@ const UserModel = {
       const users = await prisma.user.findMany();
       return users;
     } catch (error) {
-      console.error('Error fetching all users:', error);
+      console.error("Error fetching all users:", error);
       throw error;
     }
   },

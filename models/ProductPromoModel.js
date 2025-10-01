@@ -16,6 +16,7 @@ const ProductPromoModel = {
             discount: parseInt(productData.discount),
             product_description: productData.product_description,
             product_category: productData.product_category,
+            product_point: parseInt(productData.point),
             start_date: new Date(productData.start_date),
             end_date: new Date(productData.end_date),
             stock: parseInt(productData.stock),

@@ -8,36 +8,36 @@ exports.register = async (req, res) => {
   const profile_picture = req.file ? req.file.filename : null;
 
   // Validasi input
-  if (!username || !email || !password || !roles || !no_telp) {
+  if (!username || !email || !password || !no_telp) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-  // Validasi roles
-  const allowedRoles = ["USER", "ADMIN"];
-  const parsedRoles = Array.isArray(roles) ? roles : [roles];
-  const upperRoles = parsedRoles.map((r) => r.toUpperCase());
+  let finalRoles = ["USER"];
 
-  for (const role of upperRoles) {
-    if (!allowedRoles.includes(role)) {
-      return res.status(400).json({ message: `Invalid role: ${role}` });
+  if (roles) {
+    const allowedRoles = ["USER", "ADMIN"];
+    const parsedRoles = Array.isArray(roles) ? roles : [roles];
+    const upperRoles = parsedRoles.map((r) => r.toUpperCase());
+    for (const role of upperRoles) {
+      if (!allowedRoles.includes(role)) {
+        return res.status(400).json({ message: `Invalid role: ${role}` });
+      }
     }
+
+    finalRoles = upperRoles;
   }
 
   try {
-    // Cek username sudah ada atau belum
     const existingUser = await UserModel.findByUsername(username);
     if (existingUser) {
       return res.status(400).json({ message: "Username already exists" });
     }
-
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-    // Register user
     const newUser = await UserModel.register(
       username,
       email,
       hashedPassword,
-      upperRoles,
+      finalRoles,
       no_telp,
       profile_picture
     );
@@ -50,11 +50,12 @@ exports.register = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required" });
+    return res.status(400).json({ message: "Email or No.Telp and password are required" });
   }
 
   try {
@@ -68,13 +69,12 @@ exports.login = async (req, res) => {
     }
     const token = jwt.sign(
       { id: user.id, username: user.username, roles: user.roles },
-      process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      process.env.JWT_SECRET
     );
     res.json({
       message: "Login berhasil",
       token,
-      user: user
+      user: user,
     });
   } catch (error) {
     console.error("Error during login:", error);
