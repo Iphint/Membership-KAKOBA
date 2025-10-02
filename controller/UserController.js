@@ -1,5 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const path = require("path");
 const UserModel = require("../models/UserModel");
 const { use } = require("../routes/UserRoutes");
 
@@ -50,12 +52,13 @@ exports.register = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ message: "Email or No.Telp and password are required" });
+    return res
+      .status(400)
+      .json({ message: "Email or No.Telp and password are required" });
   }
 
   try {
@@ -139,6 +142,9 @@ exports.updateUser = async (req, res) => {
         .json({ message: "Username already in use by another user" });
     }
 
+    const oldUser = await UserModel.findById(parseInt(id));
+    const oldAvatar = oldUser?.profile_picture;
+
     // Update user
     const updatedUser = await UserModel.updateUser(
       parseInt(id),
@@ -150,6 +156,15 @@ exports.updateUser = async (req, res) => {
       },
       file
     );
+
+    if (file && oldAvatar) {
+      const oldFilePath = path.join(__dirname, "../uploads", oldAvatar);
+      fs.unlink(oldFilePath, (err) => {
+        if (err) {
+          console.warn("Failed to delete old avatar:", err.message);
+        }
+      });
+    }
 
     res.status(200).json({
       status: true,
@@ -168,7 +183,17 @@ exports.deleteUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+    const avatar = user.profile_picture;
     await UserModel.deleteUser(parseInt(id));
+    // 🔥 Hapus file avatar jika ada
+    if (avatar) {
+      const filePath = path.join(__dirname, "../uploads", avatar);
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.warn("Failed to delete avatar file:", err.message);
+        }
+      });
+    }
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
     console.error("Error deleting user:", error);
