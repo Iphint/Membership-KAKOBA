@@ -1,4 +1,20 @@
 services:
+  backend:
+    build: .
+    container_name: membership_backend  
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      # Redis
+      REDIS_HOST: membership_redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      # Postgres
+      DATABASE_URL: postgres://kakoba:kakoba123@membership_postgres:5432/membership
+    depends_on:
+      - postgres
+      - redis
   postgres:
     image: postgres:15
     restart: always
