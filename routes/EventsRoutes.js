@@ -1,9 +1,10 @@
 const express = require("express");
-const router = express.Router();
 const EventsController = require("../controller/EventsController");
 const { verifyToken } = require("../middleware/AuthMiddleware");
 const { admin, general } = require("../config/Auth");
 const upload = require("../middleware/Upload");
+
+const router = express.Router();
 
 router.post(
   "/events",
@@ -20,6 +21,12 @@ router.put(
   general,
   upload.array("images", 5),
   EventsController.updateEvent
+);
+router.delete(
+  "/event/:id",
+  verifyToken,
+  admin,
+  EventsController.deleteEvent
 );
 
 module.exports = router;

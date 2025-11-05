@@ -1,26 +1,32 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const UserController = require('../controller/UserController');
-const { verifyToken } = require('../middleware/AuthMiddleware');
-const { admin, general } = require('../config/Auth');
-const upload = require('../middleware/Upload');
+const UserController = require("../controller/UserController");
+const { verifyToken } = require("../middleware/AuthMiddleware");
+const { admin, general } = require("../config/Auth");
+const upload = require("../middleware/Upload");
 
 // User registration route
 router.post(
-  '/register',
-  upload.single('profile_picture'),
+  "/register",
+  upload.single("profile_picture"),
   UserController.register
 );
-router.post('/login', UserController.login);
-router.get('/users', verifyToken, admin, UserController.getAllUsers);
-router.get('/user/:id', verifyToken, general, UserController.findUserById);
+router.post("/login", UserController.login);
+router.get("/users", verifyToken, admin, UserController.getAllUsers);
+router.get("/user/:id", verifyToken, general, UserController.findUserById);
 router.put(
-  '/user/:id',
+  "/user/:id",
   verifyToken,
   general,
-  upload.single('profile_picture'),
+  upload.single("profile_picture"),
   UserController.updateUser
 );
-router.delete('/user/:id', verifyToken, general, UserController.deleteUser);
+router.delete("/user/:id", verifyToken, general, UserController.deleteUser);
+router.post(
+  "/push-token",
+  verifyToken,
+  general,
+  UserController.updateUserPushToken
+);
 
 module.exports = router;

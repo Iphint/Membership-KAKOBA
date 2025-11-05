@@ -14,20 +14,24 @@ const PointsRoutes = require("./routes/PointsRoutes");
 const EventsRoutes = require("./routes/EventsRoutes");
 const path = require("path");
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use(
-  "/api",
-  UserRoutes,
-  TransactionRoutes,
-  RewardRoutes,
-  RewardTierRoutes,
-  ProductPromoRoutes,
-  PointsRoutes,
-  EventsRoutes
-);
+app.use("/api", UserRoutes);
+app.use("/api", TransactionRoutes);
+app.use("/api", RewardRoutes);
+app.use("/api", RewardTierRoutes);
+app.use("/api", ProductPromoRoutes);
+app.use("/api", PointsRoutes);
+app.use("/api", EventsRoutes);
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/api/test", (req, res) => {

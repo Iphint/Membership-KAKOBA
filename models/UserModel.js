@@ -134,6 +134,18 @@ const UserModel = {
       throw error;
     }
   },
+  updatePushToken: async (id, pushToken) => {
+    try {
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: { expoPushToken: pushToken }, 
+      });
+      return updatedUser;
+    } catch (error) {
+      console.error("Error updating push token:", error);
+      throw error;
+    }
+  },
 };
 
 module.exports = UserModel;

@@ -213,3 +213,26 @@ exports.getAllUsers = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+exports.updateUserPushToken = async (req, res) => {
+  try {
+    const { expoPushToken } = req.body;
+    const userId = req.user.id;
+
+    if (expoPushToken && typeof expoPushToken !== "string") {
+      return res.status(400).json({ message: "Invalid push token" });
+    }
+
+    const updatedUser = await UserModel.updatePushToken(
+      userId,
+      expoPushToken || null
+    );
+
+    res.status(200).json({
+      message: "Push token updated successfully",
+      data: updatedUser,
+    });
+  } catch (error) {
+    console.error("Error updating push token:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};

@@ -23,6 +23,7 @@ model User {
   profile_picture String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  expoPushToken   String?  @map("expo_push_token")
 
   transactions Transaction[]
   RewardTier   Reward[]
@@ -127,10 +128,11 @@ model Events {
 
 model ImageEvent {
   id        Int    @id @default(autoincrement())
-  event     Events @relation(fields: [event_id], references: [id])
   event_id  Int
   image_url String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  event Events @relation(fields: [event_id], references: [id])
 }
