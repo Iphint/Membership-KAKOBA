@@ -4,8 +4,6 @@ exports.createTransaction = async (req, res) => {
   try {
     const user_id = req.user.id;
     const { items, point_transaction, type } = req.body;
-
-    // Validasi input
     if (
       !user_id ||
       !items ||
@@ -21,15 +19,12 @@ exports.createTransaction = async (req, res) => {
             "All fields are required. Make sure to provide an items array.",
         });
     }
-
-    // Buat transaksi
     const transaction = await TransactionModel.createTransaction(
       user_id,
       items,
       point_transaction,
       type
     );
-
     res.status(201).json({
       message: "Transaction created successfully",
       data: transaction,
@@ -81,9 +76,6 @@ exports.getTransactionsByUserId = async (req, res) => {
         .status(200)
         .json({ message: "No transactions found for this user" });
     }
-    console.log('====================================');
-    console.log("test data success");
-    console.log('====================================');
     res.status(200).json({
       message: "Transactions fetched successfully",
       data: transactions,
@@ -102,8 +94,6 @@ exports.updateTransaction = async (req, res) => {
       quantity_product_transaction,
       point_transaction,
     } = req.body;
-
-    // Validasi input
     if (
       !name_product_transaction ||
       !price_product_transaction ||
@@ -112,8 +102,6 @@ exports.updateTransaction = async (req, res) => {
     ) {
       return res.status(400).json({ message: "All fields are required" });
     }
-
-    // Update transaksi
     const updatedTransaction = await TransactionModel.updateTransaction(id, {
       name_product_transaction,
       price_product_transaction,

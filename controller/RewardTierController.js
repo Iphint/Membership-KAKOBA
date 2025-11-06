@@ -3,12 +3,9 @@ const RewardTier = require('../models/RewardTier');
 exports.createRewardTier = async (req, res) => {
   const { reward_name, point_needed, description } = req.body;
   const image_url = req.file ? req.file.path : null;
-
-  // Validasi input
   if (!reward_name || !point_needed || !description || !image_url) {
     return res.status(400).json({ message: 'All fields are required' });
   }
-
   try {
     const rewardTier = await RewardTier.createRewardTier(
       reward_name,
@@ -57,10 +54,7 @@ exports.getRewardTierById = async (req, res) => {
 exports.updateRewardTier = async (req, res) => {
   const { id } = req.params;
   const { reward_name, point_needed, description } = req.body;
-
   const file = req.file;
-
-  // Validasi input
   if (!reward_name || !point_needed || !description) {
     return res.status(400).json({ message: 'All fields are required' });
   }

@@ -3,12 +3,9 @@ const RewardModel = require('../models/RewardModel');
 exports.createReward = async (req, res) => {
   const user_id = req.user.id;
   const { point_transaction, reward_name } = req.body;
-
-  // Validasi input
   if (!user_id || !point_transaction || !reward_name) {
     return res.status(400).json({ message: 'All fields are required' });
   }
-
   try {
     const result = await RewardModel.createReward(
       user_id,

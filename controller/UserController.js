@@ -114,12 +114,9 @@ exports.updateUser = async (req, res) => {
   const file = req.file;
 
   try {
-    // Validasi input
     if (!username || !email || !roles || !no_telp) {
       return res.status(400).json({ message: "All fields are required" });
     }
-
-    // Validasi roles
     const allowedRoles = ["USER", "ADMIN"];
     const parsedRoles = Array.isArray(roles) ? roles : [roles];
     const upperRoles = parsedRoles.map((r) => r.toUpperCase());
@@ -129,7 +126,6 @@ exports.updateUser = async (req, res) => {
         return res.status(400).json({ message: `Invalid role: ${role}` });
       }
     }
-
     const existingUser = await UserModel.findByEmail(email);
     const userByUsername = await UserModel.findByUsername(username);
     if (existingUser && existingUser.id !== parseInt(id)) {
@@ -141,11 +137,8 @@ exports.updateUser = async (req, res) => {
         .status(400)
         .json({ message: "Username already in use by another user" });
     }
-
     const oldUser = await UserModel.findById(parseInt(id));
     const oldAvatar = oldUser?.profile_picture;
-
-    // Update user
     const updatedUser = await UserModel.updateUser(
       parseInt(id),
       {
@@ -165,7 +158,6 @@ exports.updateUser = async (req, res) => {
         }
       });
     }
-
     res.status(200).json({
       status: true,
       message: "User updated successfully",
@@ -185,7 +177,6 @@ exports.deleteUser = async (req, res) => {
     }
     const avatar = user.profile_picture;
     await UserModel.deleteUser(parseInt(id));
-    // 🔥 Hapus file avatar jika ada
     if (avatar) {
       const filePath = path.join(__dirname, "../uploads", avatar);
       fs.unlink(filePath, (err) => {

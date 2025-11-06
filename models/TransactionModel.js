@@ -7,7 +7,6 @@ const TransactionModel = {
   createTransaction: async (user_id, items, point_transaction, type) => {
     try {
       const result = await prisma.$transaction(async (tx) => {
-        // 1. Simpan transaksi
         const transaction = await tx.transaction.create({
           data: {
             user_id: parseInt(user_id),
@@ -25,14 +24,11 @@ const TransactionModel = {
             items: true,
           },
         });
-
-        // 2. Cek apakah user sudah punya data point
         const existingPoint = await tx.point.findFirst({
           where: { user_id: parseInt(user_id) },
         });
 
         if (existingPoint) {
-          // Tambahkan poin
           await tx.point.update({
             where: { id: existingPoint.id },
             data: {
@@ -42,7 +38,6 @@ const TransactionModel = {
             },
           });
         } else {
-          // Buat data poin baru
           await tx.point.create({
             data: {
               user_id: parseInt(user_id),

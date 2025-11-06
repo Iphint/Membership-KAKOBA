@@ -19,7 +19,7 @@ exports.notifyAllUsers = async (title, message) => {
       await sendPushNotifications(pushTokens, title, message);
       console.log(`Notifikasi dikirim ke ${pushTokens.length} user`);
     } else {
-      console.log("ℹTidak ada user dengan expoPushToken");
+      console.log("Tidak ada user dengan expoPushToken");
     }
   } catch (error) {
     console.error("Gagal mengirim notifikasi ke user:", error);

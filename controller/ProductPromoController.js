@@ -1,11 +1,10 @@
 const ProductPromoModel = require("../models/ProductPromoModel");
+const { notifyAllUsers } = require("../services/NotificationService");
 
 exports.createProductPromo = async (req, res) => {
   try {
     const productData = req.body;
     const imageFiles = req.files;
-
-    // Validasi sederhana
     const requiredFields = [
       "product_name",
       "price_normal",
@@ -27,6 +26,11 @@ exports.createProductPromo = async (req, res) => {
       productData,
       imageFiles
     );
+
+    await notifyAllUsers(
+      "Promo Produk Baru!",
+      `Produk "${productData.product_name}" sekarang sedang promo dengan diskon ${productData.discount}%. Jangan lewatkan kesempatan ini!, promo berlaku dari ${productData.start_date} hingga ${productData.end_date}`
+    )    
 
     res.status(201).json(result);
   } catch (error) {
