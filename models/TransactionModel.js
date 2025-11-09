@@ -2,9 +2,15 @@ const { PrismaClient } = require("@prisma/client");
 const { get } = require("../routes/TransactionRoutes");
 const redisClient = require("../config/Redis");
 const prisma = new PrismaClient();
+const { v4: uuidv4 } = require("uuid");
 
 const TransactionModel = {
-  createTransaction: async (user_id, items, point_transaction, type) => {
+  createTransaction: async (
+    user_id,
+    items,
+    point_transaction,
+    type = "earn"
+  ) => {
     try {
       const result = await prisma.$transaction(async (tx) => {
         const transaction = await tx.transaction.create({
@@ -61,6 +67,81 @@ const TransactionModel = {
       throw error;
     }
   },
+  createRedeemTransaction: async (
+    user_id,
+    items,
+    point_transaction,
+    type = "redeem"
+  ) => {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const existingPoint = await tx.point.findFirst({
+          where: { user_id: parseInt(user_id) },
+        });
+        if (!existingPoint || existingPoint.point_balance < point_transaction) {
+          throw new Error("Insufficient points to redeem.");
+        }
+        const qrToken = uuidv4();
+        const transaction = await tx.transaction.create({
+          data: {
+            user_id: parseInt(user_id),
+            point_transaction,
+            type,
+            qr_code_token: qrToken,
+            qr_code_used: false,
+            items: {
+              create: items.map((item) => ({
+                name_product_transaction: item.name_product_transaction,
+                price_product_transaction: item.price_product_transaction,
+                quantity_product_transaction: item.quantity_product_transaction,
+              })),
+            },
+          },
+          include: { items: true },
+        });
+        for (const item of items) {
+          const product = await tx.productPromo.findUnique({
+            where: { id: parseInt(item.product_id) },
+            select: { id: true, stock: true, product_name: true },
+          });
+
+          if (!product) {
+            throw new Error(`Product with ID ${item.product_id} not found.`);
+          }
+
+          if (product.stock < item.quantity_product_transaction) {
+            throw new Error(
+              `Not enough stock for product: ${product.product_name}. Available: ${product.stock}`
+            );
+          }
+          await tx.productPromo.update({
+            where: { id: product.id },
+            data: {
+              stock: {
+                decrement: item.quantity_product_transaction,
+              },
+            },
+          });
+        }
+        await tx.point.update({
+          where: { id: existingPoint.id },
+          data: {
+            point_balance: {
+              decrement: point_transaction,
+            },
+          },
+        });
+        return transaction;
+      });
+      await redisClient.del("all_transactions_with_users");
+      console.log(`Cache invalidated after redeem transaction.`);
+      return result;
+    } catch (error) {
+      console.error("Error creating redeem transaction:", error);
+      throw error;
+    }
+  },
+
   getAllTransactions: async () => {
     const cacheKey = "all_transactions_with_users";
     const CACHE_EXPIRATION_TIME = 60 * 2;

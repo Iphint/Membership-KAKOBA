@@ -31,15 +31,17 @@ model User {
 }
 
 model Transaction {
-  id                Int               @id @default(autoincrement())
-  user              User              @relation(fields: [user_id], references: [id])
+  id                Int      @id @default(autoincrement())
   user_id           Int
-  items             TransactionItem[]
-  point_transaction Int               @default(0)
+  point_transaction Int      @default(0)
   type              String?
+  qr_code_token     String?
+  qr_code_used      Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  items TransactionItem[]
+  user  User              @relation(fields: [user_id], references: [id])
 }
 
 model TransactionItem {

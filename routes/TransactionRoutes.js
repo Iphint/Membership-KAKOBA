@@ -4,11 +4,10 @@ const TransactionController = require('../controller/TransactionController');
 const { verifyToken } = require('../middleware/AuthMiddleware');
 const { user, general, admin } = require('../config/Auth');
 
-// Create a new transaction
 router.get(
   '/transactions',
   verifyToken,
-  general,
+  admin,
   TransactionController.getAllTransactions
 );
 router.post(
@@ -16,6 +15,12 @@ router.post(
   verifyToken,
   general,
   TransactionController.createTransaction
+);
+router.post(
+  '/reedem-transaction',
+  verifyToken,
+  general,
+  TransactionController.createReedemTransaction
 );
 router.get(
   '/transaction/:id',

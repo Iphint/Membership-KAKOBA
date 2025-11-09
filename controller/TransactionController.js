@@ -9,21 +9,18 @@ exports.createTransaction = async (req, res) => {
       !items ||
       !Array.isArray(items) ||
       items.length === 0 ||
-      !point_transaction ||
-      !type
+      !point_transaction
     ) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "All fields are required. Make sure to provide an items array.",
-        });
+      return res.status(400).json({
+        message:
+          "All fields are required. Make sure to provide an items array.",
+      });
     }
     const transaction = await TransactionModel.createTransaction(
       user_id,
       items,
       point_transaction,
-      type
+      "earn"
     );
     res.status(201).json({
       message: "Transaction created successfully",
@@ -34,6 +31,42 @@ exports.createTransaction = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+exports.createReedemTransaction = async (req, res) => {
+  try {
+    const user_id = req.user.id;
+    const { items, point_transaction } = req.body;
+    if (
+      !user_id ||
+      !items ||
+      !Array.isArray(items) ||
+      items.length === 0 ||
+      !point_transaction
+    ) {
+      return res.status(400).json({
+        message:
+          "All fields are required. Make sure to provide an items array and point_transaction.",
+      });
+    }
+    const transaction = await TransactionModel.createRedeemTransaction(
+      user_id,
+      items,
+      point_transaction,
+      "redeem"
+    );
+
+    res.status(201).json({
+      message: "Redeem transaction created successfully",
+      data: transaction,
+    });
+  } catch (error) {
+    console.error("Error creating redeem transaction:", error);
+    if (error.message.includes("Insufficient points")) {
+      return res.status(400).json({ message: error.message });
+    }
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 exports.getAllTransactions = async (req, res) => {
   try {
     const transactions = await TransactionModel.getAllTransactions();
