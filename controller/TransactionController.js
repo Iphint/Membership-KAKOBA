@@ -66,7 +66,6 @@ exports.createReedemTransaction = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 exports.getAllTransactions = async (req, res) => {
   try {
     const transactions = await TransactionModel.getAllTransactions();
@@ -149,6 +148,41 @@ exports.updateTransaction = async (req, res) => {
   } catch (error) {
     console.error("Error updating transaction:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+exports.updateReedemTransaction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { qr_code_token } = req.body;
+
+    if (!id || !qr_code_token) {
+      return res.status(400).json({
+        status: "error",
+        message: "Transaction ID and QR code token are required",
+      });
+    }
+
+    const result = await TransactionModel.updateTransactionQRCode(id, qr_code_token);
+
+    if (result.count === 0) {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid QR code token or QR already used",
+      });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      message: "QR code verified successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error in updateReedemTransaction:", error);
+
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+    });
   }
 };
 exports.deleteTransaction = async (req, res) => {

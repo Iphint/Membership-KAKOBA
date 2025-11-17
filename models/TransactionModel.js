@@ -141,7 +141,24 @@ const TransactionModel = {
       throw error;
     }
   },
-
+  updateTransactionQRCode: async (id, qr_code_token) => {
+    try {
+      const updatedTransaction = await prisma.transaction.updateMany({
+        where: {
+          id: parseInt(id),
+          qr_code_token: qr_code_token,
+          qr_code_used: false,
+        },
+        data: {
+          qr_code_used: true,
+        },
+      });
+      return updatedTransaction;
+    } catch (error) {
+      console.error("Error updating transaction QR code:", error);
+      throw error;
+    }
+  },
   getAllTransactions: async () => {
     const cacheKey = "all_transactions_with_users";
     const CACHE_EXPIRATION_TIME = 60 * 2;
@@ -222,6 +239,7 @@ const TransactionModel = {
     try {
       const deletedTransaction = await prisma.transaction.delete({
         where: { id: parseInt(id) },
+        include: { items: true },
       });
       const cacheKeyToInvalidate = "all_transactions_with_users";
       await redisClient.del(cacheKeyToInvalidate);

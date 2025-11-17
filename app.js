@@ -4,7 +4,6 @@ const bodyParser = require("body-parser");
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Routes
 const UserRoutes = require("./routes/UserRoutes");
 const TransactionRoutes = require("./routes/TransactionRoutes");
 const RewardRoutes = require("./routes/RewardRoutes");
@@ -21,6 +20,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 

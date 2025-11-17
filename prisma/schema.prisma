@@ -46,7 +46,7 @@ model Transaction {
 
 model TransactionItem {
   id                           Int         @id @default(autoincrement())
-  transaction                  Transaction @relation(fields: [transaction_id], references: [id])
+  transaction                  Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
   transaction_id               Int
   name_product_transaction     String
   price_product_transaction    Int
