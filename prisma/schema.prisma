@@ -138,3 +138,13 @@ model ImageEvent {
 
   event Events @relation(fields: [event_id], references: [id])
 }
+
+model ImageViewScreen {
+  id        Int    @id @default(autoincrement())
+  title     String
+  sub_title String
+  image_url String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

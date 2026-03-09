@@ -74,67 +74,73 @@ const TransactionModel = {
     type = "redeem"
   ) => {
     try {
-      const result = await prisma.$transaction(async (tx) => {
-        const existingPoint = await tx.point.findFirst({
-          where: { user_id: parseInt(user_id) },
-        });
-        if (!existingPoint || existingPoint.point_balance < point_transaction) {
-          throw new Error("Insufficient points to redeem.");
-        }
-        const qrToken = uuidv4();
-        const transaction = await tx.transaction.create({
-          data: {
-            user_id: parseInt(user_id),
-            point_transaction,
-            type,
-            qr_code_token: qrToken,
-            qr_code_used: false,
-            items: {
-              create: items.map((item) => ({
-                name_product_transaction: item.name_product_transaction,
-                price_product_transaction: item.price_product_transaction,
-                quantity_product_transaction: item.quantity_product_transaction,
-              })),
+      const result = await prisma.$transaction(
+        async (tx) => {
+          for (const item of items) {
+            const stockResult = await tx.productPromo.updateMany({
+              where: {
+                id: parseInt(item.product_id),
+                stock: {
+                  gte: item.quantity_product_transaction,
+                },
+              },
+              data: {
+                stock: {
+                  decrement: item.quantity_product_transaction,
+                },
+              },
+            });
+
+            if (stockResult.count === 0) {
+              throw new Error("INSUFFICIENT_STOCK");
+            }
+          }
+          const pointResult = await tx.point.updateMany({
+            where: {
+              user_id: parseInt(user_id),
+              point_balance: {
+                gte: point_transaction,
+              },
             },
-          },
-          include: { items: true },
-        });
-        for (const item of items) {
-          const product = await tx.productPromo.findUnique({
-            where: { id: parseInt(item.product_id) },
-            select: { id: true, stock: true, product_name: true },
-          });
-
-          if (!product) {
-            throw new Error(`Product with ID ${item.product_id} not found.`);
-          }
-
-          if (product.stock < item.quantity_product_transaction) {
-            throw new Error(
-              `Not enough stock for product: ${product.product_name}. Available: ${product.stock}`
-            );
-          }
-          await tx.productPromo.update({
-            where: { id: product.id },
             data: {
-              stock: {
-                decrement: item.quantity_product_transaction,
+              point_balance: {
+                decrement: point_transaction,
               },
             },
           });
-        }
-        await tx.point.update({
-          where: { id: existingPoint.id },
-          data: {
-            point_balance: {
-              decrement: point_transaction,
+
+          if (pointResult.count === 0) {
+            throw new Error("INSUFFICIENT_POINTS");
+          }
+          const qrToken = uuidv4();
+          const transaction = await tx.transaction.create({
+            data: {
+              user_id: parseInt(user_id),
+              point_transaction,
+              type,
+              qr_code_token: qrToken,
+              qr_code_used: false,
+              items: {
+                create: items.map((item) => ({
+                  name_product_transaction: item.name_product_transaction,
+                  price_product_transaction: item.price_product_transaction,
+                  quantity_product_transaction:
+                    item.quantity_product_transaction,
+                })),
+              },
             },
-          },
-        });
-        return transaction;
-      });
+            include: { items: true },
+          });
+
+          return transaction;
+        },
+        {
+          isolationLevel: "Serializable",
+        }
+      );
+
       await redisClient.del("all_transactions_with_users");
-      console.log(`Cache invalidated after redeem transaction.`);
+      console.log("Cache invalidated after redeem transaction.");
       return result;
     } catch (error) {
       console.error("Error creating redeem transaction:", error);
