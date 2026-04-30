@@ -139,7 +139,7 @@ const ProductPromoModel = {
       };
     }
   },
-  updateProductPromo: async (id, data, newImages) => {
+  updateProductPromo: async (id, data, newImages, imagesToDelete = []) => {
     try {
       const promoId = parseInt(id);
       const existingPromo = await prisma.productPromo.findUnique({
@@ -149,20 +149,43 @@ const ProductPromoModel = {
       if (!existingPromo) {
         throw new Error("Product promo not found");
       }
-      for (const image of existingPromo.ImagePromo) {
-        const imagePath = path.join(process.cwd(), "uploads", image.image_url);
-        if (fs.existsSync(imagePath)) {
-          try {
-            fs.unlinkSync(imagePath);
-            console.log(`Deleted image file: ${imagePath}`);
-          } catch (err) {
-            console.error("Error deleting image file:", err);
+      if (imagesToDelete && imagesToDelete.length > 0) {
+        for (const imageId of imagesToDelete) {
+          const imageToDelete = existingPromo.ImagePromo.find(
+            (img) => img.id === parseInt(imageId)
+          );
+
+          if (imageToDelete) {
+            console.log(`Deleting image ID: ${imageId}`);
+            const imagePath = path.join(
+              process.cwd(),
+              "uploads",
+              imageToDelete.image_url
+            );
+
+            if (fs.existsSync(imagePath)) {
+              try {
+                fs.unlinkSync(imagePath);
+                console.log(`✅ Deleted file: ${imageToDelete.image_url}`);
+              } catch (err) {
+                console.error(
+                  `❌ Error deleting file ${imageToDelete.image_url}:`,
+                  err
+                );
+              }
+            } else {
+              console.log(`⚠️  File not found: ${imagePath}`);
+            }
+
+            await prisma.imagePromo.delete({
+              where: { id: parseInt(imageId) },
+            });
+            console.log(`✅ Deleted from DB: ${imageId}`);
+          } else {
+            console.log(`⚠️  Image ID ${imageId} not found in existing images`);
           }
         }
       }
-      await prisma.imagePromo.deleteMany({
-        where: { product_id: promoId },
-      });
       const updatedPromo = await prisma.productPromo.update({
         where: { id: promoId },
         data: {
@@ -178,18 +201,25 @@ const ProductPromoModel = {
           is_featured: data.is_featured,
         },
       });
-      const imageCreatePromises = newImages.map((file) =>
-        prisma.imagePromo.create({
-          data: {
-            product_id: updatedPromo.id,
-            image_url: file.filename,
-          },
-        })
-      );
-      await Promise.all(imageCreatePromises);
+
+      if (newImages && newImages.length > 0) {
+        console.log(`➕ Adding ${newImages.length} new images`);
+        const imageCreatePromises = newImages.map((file) =>
+          prisma.imagePromo.create({
+            data: {
+              product_id: updatedPromo.id,
+              image_url: file.filename,
+            },
+          })
+        );
+        await Promise.all(imageCreatePromises);
+        console.log(`✅ Added ${newImages.length} new images`);
+      }
+
+      console.log("✅ Product promo updated successfully");
       return updatedPromo;
     } catch (error) {
-      console.error("Error updating product promo:", error);
+      console.error("❌ Error updating product promo:", error);
       throw error;
     }
   },

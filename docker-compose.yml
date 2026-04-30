@@ -13,7 +13,7 @@ services:
       REDIS_PORT: 6379
       REDIS_DB: 0
       # Postgres
-      DATABASE_URL: postgres://kakoba:kakoba123@membership_postgres:5432/membership
+      DATABASE_URL: postgres://kakoba:kakoba123@membership_postgres:5433/membership
     depends_on:
       - postgres
       - redis

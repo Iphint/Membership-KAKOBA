@@ -30,7 +30,7 @@ exports.createProductPromo = async (req, res) => {
     await notifyAllUsers(
       "Promo Produk Baru!",
       `Produk "${productData.product_name}" sekarang sedang promo dengan diskon ${productData.discount}%. Jangan lewatkan kesempatan ini!, promo berlaku dari ${productData.start_date} hingga ${productData.end_date}`
-    )    
+    );
 
     res.status(201).json(result);
   } catch (error) {
@@ -103,9 +103,23 @@ exports.updateProductPromo = async (req, res) => {
     stock,
     is_available,
     is_featured,
+    imagesToDelete,
   } = req.body;
 
   try {
+    let parsedImagesToDelete = [];
+    if (imagesToDelete) {
+      try {
+        parsedImagesToDelete =
+          typeof imagesToDelete === "string"
+            ? JSON.parse(imagesToDelete)
+            : imagesToDelete;
+        console.log("Images to delete:", parsedImagesToDelete);
+      } catch (e) {
+        console.error("Error parsing imagesToDelete:", e);
+      }
+    }
+
     const updatedPromo = await ProductPromoModel.updateProductPromo(
       id,
       {
@@ -120,7 +134,8 @@ exports.updateProductPromo = async (req, res) => {
         is_available: is_available === "true" || is_available === true,
         is_featured: is_featured === "true" || is_featured === true,
       },
-      req.files
+      req.files,
+      parsedImagesToDelete
     );
 
     res.status(200).json({
@@ -129,7 +144,10 @@ exports.updateProductPromo = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating product promo:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 };
 exports.getProductFeature = async (req, res) => {
