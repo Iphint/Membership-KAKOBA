@@ -1,8 +1,7 @@
 const { PrismaClient } = require("@prisma/client");
 const { get } = require("../routes/UserRoutes");
 const { deleteEvent } = require("../controller/EventsController");
-const fs = require("fs");
-const path = require("path");
+const deleteFileIfExists = require("../utils/deleteCheckFiles");
 const prisma = new PrismaClient();
 
 const EventsModel = {
@@ -81,10 +80,11 @@ const EventsModel = {
       throw error;
     }
   },
-  updateEvent: async (eventId, eventData, imageFiles) => {
+  updateEvent: async (eventId, eventData, imageFiles, imagesToDelete = []) => {
     try {
       const existingEvent = await prisma.events.findUnique({
         where: { id: eventId },
+        include: { ImageEvent: true },
       });
 
       if (!existingEvent) {
@@ -95,33 +95,45 @@ const EventsModel = {
       }
 
       const updatedEvent = await prisma.$transaction(async (tx) => {
-        const updatedData = {
-          event_name: eventData.event_name,
-          event_date: new Date(eventData.event_date),
-          location: eventData.location,
-          description: eventData.description,
-        };
-
-        const updatedEvent = await tx.events.update({
+        // ================= UPDATE DATA =================
+        const updated = await tx.events.update({
           where: { id: eventId },
-          data: updatedData,
+          data: {
+            event_name: eventData.event_name,
+            event_date: new Date(eventData.event_date),
+            location: eventData.location,
+            description: eventData.description,
+          },
         });
 
-        if (imageFiles && imageFiles.length > 0) {
-          await tx.imageEvent.deleteMany({
-            where: { event_id: eventId },
-          });
-          const imageRecords = imageFiles.map((file) => ({
-            event_id: updatedEvent.id,
-            image_url: file.filename,
-          }));
+        // ================= DELETE SELECTED IMAGES =================
+        if (imagesToDelete.length > 0) {
+          const images = existingEvent.ImageEvent.filter((img) =>
+            imagesToDelete.includes(img.id)
+          );
 
-          await tx.imageEvent.createMany({
-            data: imageRecords,
+          await Promise.all(
+            images.map((img) => deleteFileIfExists(img.image_url))
+          );
+
+          await tx.imageEvent.deleteMany({
+            where: {
+              id: { in: imagesToDelete },
+            },
           });
         }
 
-        return updatedEvent;
+        // ================= ADD NEW IMAGES =================
+        if (imageFiles && imageFiles.length > 0) {
+          await tx.imageEvent.createMany({
+            data: imageFiles.map((file) => ({
+              event_id: eventId,
+              image_url: file.filename,
+            })),
+          });
+        }
+
+        return updated;
       });
 
       return {
@@ -147,33 +159,26 @@ const EventsModel = {
           message: "Event not found",
         };
       }
+
       await prisma.$transaction(async (tx) => {
         if (existingEvent.ImageEvent && existingEvent.ImageEvent.length > 0) {
-          for (const image of existingEvent.ImageEvent) {
-            const imagePath = path.join(
-              process.cwd(),
-              "uploads",
-              image.image_url
-            );
-            if (fs.existsSync(imagePath)) {
-              fs.unlinkSync(imagePath);
-              console.log("🗑️ Deleted file:", image.image_url);
-            } else {
-              console.log("⚠️ File not found:", image.image_url);
-            }
-          }
+          await Promise.all(
+            existingEvent.ImageEvent.map((image) =>
+              deleteFileIfExists(image.image_url)
+            )
+          );
 
-          // hapus data gambar dari database
-          await tx.ImageEvent.deleteMany({
+          await tx.imageEvent.deleteMany({
             where: { event_id: Number(eventId) },
           });
+
           console.log("🗑️ Deleted ImageEvent records for event_id:", eventId);
         }
 
-        // hapus event
         await tx.events.delete({
           where: { id: Number(eventId) },
         });
+
         console.log("🗑️ Deleted event record with ID:", eventId);
       });
 
@@ -182,7 +187,7 @@ const EventsModel = {
         message: "Event and related images deleted successfully",
       };
     } catch (error) {
-      console.error("❌ Error deleting event:", error);
+      console.error("Error deleting event:", error);
       throw error;
     }
   },

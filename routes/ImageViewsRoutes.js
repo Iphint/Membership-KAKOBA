@@ -13,6 +13,28 @@ router.post(
   ImagesViewController.createImageViewScreen
 );
 
+router.delete(
+  "/image-view/:id",
+  verifyToken,
+  admin,
+  ImagesViewController.deleteImageViewScreen
+);
+
+router.put(
+  "/image-view/:id",
+  verifyToken,
+  admin,
+  upload.single("image"),
+  ImagesViewController.updateImageViewScreen
+);
+
+router.get(
+  "/image-view/:id",
+  verifyToken,
+  admin,
+  ImagesViewController.getImageViewScreenById
+);
+
 router.get("/images-view", ImagesViewController.getAllImagesViewScreen);
 
 module.exports = router;

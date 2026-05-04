@@ -2,6 +2,7 @@ const { PrismaClient } = require("@prisma/client");
 const { get } = require("../routes/UserRoutes");
 const path = require("path");
 const fs = require("fs");
+const deleteFileIfExists = require("../utils/deleteCheckFiles");
 const prisma = new PrismaClient();
 
 const ProductPromoModel = {
@@ -142,13 +143,17 @@ const ProductPromoModel = {
   updateProductPromo: async (id, data, newImages, imagesToDelete = []) => {
     try {
       const promoId = parseInt(id);
+
       const existingPromo = await prisma.productPromo.findUnique({
         where: { id: promoId },
         include: { ImagePromo: true },
       });
+
       if (!existingPromo) {
         throw new Error("Product promo not found");
       }
+
+      // ================= DELETE IMAGES =================
       if (imagesToDelete && imagesToDelete.length > 0) {
         for (const imageId of imagesToDelete) {
           const imageToDelete = existingPromo.ImagePromo.find(
@@ -157,35 +162,20 @@ const ProductPromoModel = {
 
           if (imageToDelete) {
             console.log(`Deleting image ID: ${imageId}`);
-            const imagePath = path.join(
-              process.cwd(),
-              "uploads",
-              imageToDelete.image_url
-            );
 
-            if (fs.existsSync(imagePath)) {
-              try {
-                fs.unlinkSync(imagePath);
-                console.log(`✅ Deleted file: ${imageToDelete.image_url}`);
-              } catch (err) {
-                console.error(
-                  `❌ Error deleting file ${imageToDelete.image_url}:`,
-                  err
-                );
-              }
-            } else {
-              console.log(`⚠️  File not found: ${imagePath}`);
-            }
-
+            await deleteFileIfExists(imageToDelete.image_url);
             await prisma.imagePromo.delete({
               where: { id: parseInt(imageId) },
             });
-            console.log(`✅ Deleted from DB: ${imageId}`);
+            
+            console.log(`✅ Deleted file & DB: ${imageId}`);
           } else {
-            console.log(`⚠️  Image ID ${imageId} not found in existing images`);
+            console.log(`⚠️ Image ID ${imageId} not found`);
           }
         }
       }
+
+      // ================= UPDATE DATA =================
       const updatedPromo = await prisma.productPromo.update({
         where: { id: promoId },
         data: {
@@ -202,8 +192,10 @@ const ProductPromoModel = {
         },
       });
 
+      // ================= ADD NEW IMAGES =================
       if (newImages && newImages.length > 0) {
         console.log(`➕ Adding ${newImages.length} new images`);
+
         const imageCreatePromises = newImages.map((file) =>
           prisma.imagePromo.create({
             data: {
@@ -212,11 +204,14 @@ const ProductPromoModel = {
             },
           })
         );
+
         await Promise.all(imageCreatePromises);
+
         console.log(`✅ Added ${newImages.length} new images`);
       }
 
       console.log("✅ Product promo updated successfully");
+
       return updatedPromo;
     } catch (error) {
       console.error("❌ Error updating product promo:", error);

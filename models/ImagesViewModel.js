@@ -29,10 +29,32 @@ const ImagesViewsModel = {
   deleteImageView: async (id) => {
     try {
       return await prisma.imageViewScreen.delete({
-        where: { id },
+        where: { id: Number(id) },
       });
     } catch (error) {
       console.error("Error deleting image view:", error);
+      throw error;
+    }
+  },
+
+  updateImageView: async (id, title, sub_title, image_url) => {
+    return await prisma.imageViewScreen.update({
+      where: { id: Number(id) },
+      data: {
+        title,
+        sub_title,
+        image_url,
+      },
+    });
+  },
+
+  getImageViewById: async (id) => {
+    try {
+      return await prisma.imageViewScreen.findUnique({
+        where: { id: Number(id) },
+      });
+    } catch (error) {
+      console.error("Error fetching image view by ID:", error);
       throw error;
     }
   },

@@ -53,27 +53,33 @@ exports.getEventById = async (req, res) => {
   }
 };
 exports.updateEvent = async (req, res) => {
-  const { id } = req.params;
-  const eventData = req.body;
-  const imageFiles = req.files;
-
   try {
-    const result = await EventsModel.updateEvent(
-      parseInt(id),
-      eventData,
-      imageFiles
-    );
-    if (result.status === "error") {
-      return res.status(404).json({ message: result.message });
+    const { id } = req.params;
+
+    let imagesToDelete = [];
+
+    if (req.body.imagesToDelete) {
+      imagesToDelete =
+        typeof req.body.imagesToDelete === "string"
+          ? JSON.parse(req.body.imagesToDelete)
+          : req.body.imagesToDelete;
     }
+
+    const result = await EventsModel.updateEvent(
+      Number(id),
+      req.body,
+      req.files,
+      imagesToDelete
+    );
+
     res.status(200).json(result);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+    console.error(error);
+    res.status(500).json({
+      message: "Internal server error",
+    });
   }
 };
-
 exports.deleteEvent = async (req, res) => {
   const { id } = req.params;
   try {
