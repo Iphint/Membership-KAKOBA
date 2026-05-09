@@ -108,15 +108,17 @@ exports.findUserById = async (req, res) => {
     });
   }
 };
+
 exports.updateUser = async (req, res) => {
   const { id } = req.params;
-  const { username, email, roles, no_telp } = req.body;
+  const { username, email, roles, no_telp, password } = req.body;
   const file = req.file;
 
   try {
     if (!username || !email || !roles || !no_telp) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({ message: "All fields except password are required" });
     }
+
     const allowedRoles = ["USER", "ADMIN"];
     const parsedRoles = Array.isArray(roles) ? roles : [roles];
     const upperRoles = parsedRoles.map((r) => r.toUpperCase());
@@ -128,28 +130,30 @@ exports.updateUser = async (req, res) => {
     }
     const existingUser = await UserModel.findByEmail(email);
     const userByUsername = await UserModel.findByUsername(username);
+
     if (existingUser && existingUser.id !== parseInt(id)) {
-      return res
-        .status(400)
-        .json({ message: "Email already in use by another user" });
-    } else if (userByUsername && userByUsername.id !== parseInt(id)) {
-      return res
-        .status(400)
-        .json({ message: "Username already in use by another user" });
+      return res.status(400).json({ message: "Email already in use by another user" });
+    }
+    if (userByUsername && userByUsername.id !== parseInt(id)) {
+      return res.status(400).json({ message: "Username already in use by another user" });
     }
     const oldUser = await UserModel.findById(parseInt(id));
     const oldAvatar = oldUser?.profile_picture;
+    const updateData = {
+      username,
+      email,
+      roles: upperRoles,
+      no_telp,
+    };
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updateData.password = hashedPassword;
+    }
     const updatedUser = await UserModel.updateUser(
       parseInt(id),
-      {
-        username,
-        email,
-        roles: upperRoles,
-        no_telp,
-      },
+      updateData,
       file
     );
-
     if (file && oldAvatar) {
       const oldFilePath = path.join(__dirname, "../uploads", oldAvatar);
       fs.unlink(oldFilePath, (err) => {
@@ -158,6 +162,7 @@ exports.updateUser = async (req, res) => {
         }
       });
     }
+
     res.status(200).json({
       status: true,
       message: "User updated successfully",
