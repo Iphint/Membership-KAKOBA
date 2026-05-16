@@ -3,11 +3,8 @@ import {
   Search,
   Plus,
   Trash2,
-  ShoppingCart,
-  Award,
   X,
   Check,
-  ChevronDown,
   BookOpenText,
   ScanLine,
 } from "lucide-react";
@@ -18,7 +15,6 @@ import {
   getTransactions,
   createTransaction,
   deleteTransaction,
-  deleteAllTransactions,
   scanReceiptTransaction,
 } from "@/api/transaction";
 
