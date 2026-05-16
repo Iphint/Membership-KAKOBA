@@ -13,36 +13,44 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { removeToken } from "@/utils/token";
 
 interface SidebarProps {
   activePage: string;
-  setActivePage: (page: string) => void;
 }
 
 const navItems = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "users", label: "Users", icon: Users },
-  { id: "transactions", label: "Transactions", icon: ShoppingCart },
-  { id: "products", label: "Products", icon: Package },
-  { id: "points", label: "Points", icon: Award },
-  { id: "events", label: "Events", icon: Calendar },
-  { id: "images", label: "Banner", icon: Image },
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    path: "/dashboard",
+  },
+  { id: "users", label: "Users", icon: Users, path: "/users" },
+  {
+    id: "transactions",
+    label: "Transactions",
+    icon: ShoppingCart,
+    path: "/transactions",
+  },
+  { id: "products", label: "Products", icon: Package, path: "/products" },
+  { id: "points", label: "Points", icon: Award, path: "/points" },
+  { id: "events", label: "Events", icon: Calendar, path: "/events" },
+  { id: "images", label: "Banner", icon: Image, path: "/images" },
 ];
 
-const Sidebar: React.FC<SidebarProps> = ({
-  activePage,
-  setActivePage,
-}) => {
+const Sidebar: React.FC<SidebarProps> = ({ activePage }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     return () => {
-      removeToken()
-      window.location.href = "/login";
+      removeToken();
+      navigate("/login", { replace: true });
     };
-  }
+  };
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -78,12 +86,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           const Icon = item.icon;
           const isActive = activePage === item.id;
           return (
-            <button
+            <NavLink
               key={item.id}
-              onClick={() => {
-                setActivePage(item.id);
-                setMobileOpen(false);
-              }}
+              to={item.path}
+              onClick={() => setMobileOpen(false)}
               className={`w-full flex items-center gap-3 px-4 py-3 mx-1 rounded-xl transition-all duration-200 mb-0.5 group relative
                 ${
                   isActive
@@ -111,7 +117,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               {isActive && !collapsed && (
                 <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/80" />
               )}
-            </button>
+            </NavLink>
           );
         })}
       </nav>

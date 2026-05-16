@@ -1,9 +1,15 @@
-import { User } from '@/types';
+import { PaginatedResponse, User } from '@/types';
 import api from './axios';
 
-export const getUsers = async (): Promise<User[]> => {
-    const res = await api.get("/api/users");
-    return res.data.data;
+export const getUsers = async (
+    page = 1,
+    limit = 10
+): Promise<PaginatedResponse<User>> => {
+    const res = await api.get("/api/users", { params: { page, limit } });
+    return {
+        data: res.data.data,
+        pagination: res.data.pagination,
+    };
   };
 
 export const createUser = async (payload: any) => {

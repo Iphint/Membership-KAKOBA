@@ -1,4 +1,13 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import {
+  BrowserRouter,
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { User } from "./types";
 import Login from "./pages/Login";
 import Sidebar from "./components/Sidebar";
@@ -10,7 +19,8 @@ import Products from "./pages/Products";
 import Points from "./pages/Points";
 import Events from "./pages/Events";
 import ImageViews from "./pages/ImageViews";
-import { isAuthenticated} from "./utils/token";
+import Register from "./pages/Register";
+import { isAuthenticated, setToken } from "./utils/token";
 
 type Page =
   | "dashboard"
@@ -21,53 +31,103 @@ type Page =
   | "events"
   | "images";
 
-const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [activePage, setActivePage] = useState<Page>("dashboard");
+const routePages: Record<string, Page> = {
+  "/dashboard": "dashboard",
+  "/users": "users",
+  "/transactions": "transactions",
+  "/products": "products",
+  "/points": "points",
+  "/events": "events",
+  "/images": "images",
+};
 
-  const isLoggedIn = isAuthenticated();
+const getActivePage = (pathname: string): Page => {
+  return routePages[pathname] ?? "dashboard";
+};
 
-  const handleLogin = (user: User, token: string) => {
-    localStorage.setItem("token_key", token);
-    setCurrentUser(user);
-  };
+interface AuthenticatedLayoutProps {
+  currentUser: User | null;
+}
 
-  if (!isLoggedIn) {
-    return <Login onLogin={handleLogin} />;
+const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({
+  currentUser,
+}) => {
+  const location = useLocation();
+  const activePage = useMemo(
+    () => getActivePage(location.pathname),
+    [location.pathname]
+  );
+
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
-
-  const renderPage = () => {
-    switch (activePage) {
-      case "dashboard":
-        return <Dashboard />;
-      case "users":
-        return <Users />;
-      case "transactions":
-        return <Transactions />;
-      case "products":
-        return <Products />;
-      case "points":
-        return <Points />;
-      case "events":
-        return <Events />;
-      case "images":
-        return <ImageViews />;
-      default:
-        return <Dashboard />;
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      <Sidebar
-        activePage={activePage}
-        setActivePage={(page) => setActivePage(page as Page)}
-      />
+      <Sidebar activePage={activePage} />
       <div className="flex-1 flex flex-col min-h-screen min-w-0">
         <Topbar currentUser={currentUser} activePage={activePage} />
-        <main className="flex-1 overflow-auto">{renderPage()}</main>
+        <main className="flex-1 overflow-auto">
+          <Outlet />
+        </main>
       </div>
     </div>
+  );
+};
+
+interface LoginRouteProps {
+  onLogin: (user: User, token: string) => void;
+}
+
+const LoginRoute: React.FC<LoginRouteProps> = ({ onLogin }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  if (isAuthenticated()) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const handleLogin = (user: User, token: string) => {
+    onLogin(user, token);
+    const from = location.state?.from?.pathname || "/dashboard";
+    navigate(from, { replace: true });
+  };
+
+  return <Login onLogin={handleLogin} />;
+};
+
+const AppRoutes: React.FC = () => {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const handleLogin = (user: User, token: string) => {
+    setToken(token);
+    setCurrentUser(user);
+  };
+
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginRoute onLogin={handleLogin} />} />
+      <Route path="/register" element={<Register />} />
+      <Route element={<AuthenticatedLayout currentUser={currentUser} />}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/users" element={<Users />} />
+        <Route path="/transactions" element={<Transactions />} />
+        <Route path="/products" element={<Products />} />
+        <Route path="/points" element={<Points />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/images" element={<ImageViews />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   );
 };
 

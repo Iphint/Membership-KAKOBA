@@ -17,6 +17,9 @@ import {
   getProducts,
   updateProduct,
 } from "@/api/product";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 9;
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -34,6 +37,14 @@ const categoryColors: Record<string, string> = {
 
 const Products: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    perPage: PAGE_SIZE,
+    totalItems: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
   const [_, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("ALL");
@@ -63,11 +74,12 @@ const Products: React.FC = () => {
     is_featured: false,
   });
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (page = pagination.currentPage) => {
     try {
       setLoading(true);
-      const data = await getProducts();
-      setProducts(Array.isArray(data) ? data : []);
+      const result = await getProducts(page, PAGE_SIZE);
+      setProducts(Array.isArray(result.data) ? result.data : []);
+      setPagination(result.pagination);
     } catch (err) {
       console.error(err);
       setProducts([]);
@@ -77,7 +89,7 @@ const Products: React.FC = () => {
   };
 
   React.useEffect(() => {
-    fetchProducts();
+    fetchProducts(1);
   }, []);
 
   const categories = [
@@ -165,7 +177,7 @@ const Products: React.FC = () => {
         await createProduct(payload, images);
       }
 
-      await fetchProducts();
+      await fetchProducts(editProduct ? pagination.currentPage : 1);
       setShowModal(false);
       setImages([]);
       setExistingImages([]);
@@ -178,7 +190,11 @@ const Products: React.FC = () => {
   const handleDelete = async (id: number) => {
     try {
       await deleteProduct(id);
-      setProducts((prev) => prev.filter((p) => p.id !== id));
+      await fetchProducts(
+        products.length === 1
+          ? Math.max(pagination.currentPage - 1, 1)
+          : pagination.currentPage
+      );
       setDeleteId(null);
     } catch (err) {
       console.error(err);
@@ -261,7 +277,7 @@ const Products: React.FC = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "Total Products", value: products.length },
+          { label: "Total Products", value: pagination.totalItems },
           {
             label: "Available",
             value: products.filter((p) => p.is_available).length,
@@ -395,6 +411,14 @@ const Products: React.FC = () => {
           <p className="text-sm">No products found</p>
         </div>
       )}
+
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <Pagination
+          meta={pagination}
+          itemLabel="products"
+          onPageChange={fetchProducts}
+        />
+      </div>
 
       {/* Modal */}
       {showModal && (

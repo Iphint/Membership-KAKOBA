@@ -1,9 +1,17 @@
-import { Product } from "@/types";
+import { PaginatedResponse, Product } from "@/types";
 import api from "./axios";
 
-export const getProducts = async (): Promise<Product[]> => {
-    const response = await api.get("/api/product-promos");
-    return response.data.data;
+export const getProducts = async (
+    page = 1,
+    limit = 10
+): Promise<PaginatedResponse<Product>> => {
+    const response = await api.get("/api/product-promos", {
+        params: { page, limit },
+    });
+    return {
+        data: response.data.data,
+        pagination: response.data.pagination,
+    };
 };
 export const createProduct = async (payload: any, images: File[]) => {
     const formData = new FormData();

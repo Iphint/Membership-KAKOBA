@@ -9,6 +9,20 @@ export interface User {
   updated_at?: string;
 }
 
+export interface PaginationMeta {
+  currentPage: number;
+  perPage: number;
+  totalItems: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: PaginationMeta;
+}
+
 export interface Transaction {
   id: number;
   name_product_transaction: string;
@@ -88,6 +102,62 @@ export interface ImageView {
   title: string;
   sub_title: string;
   image?: string;
+}
+
+export interface DashboardTransactionChartItem {
+  month: string;
+  earn: number;
+  redeem: number;
+}
+
+export interface DashboardUserGrowthItem {
+  month: string;
+  users: number;
+}
+
+export interface DashboardCategoryItem {
+  name: string;
+  value: number;
+}
+
+export interface DashboardTopPoint {
+  id: number;
+  user_id: number;
+  name: string;
+  email?: string;
+  points: number;
+}
+
+export interface DashboardStats {
+  totalUsers: number;
+  totalRevenue: number;
+  activeProducts: number;
+  totalProducts: number;
+  totalPoints: number;
+  totalTransactions: number;
+  purchaseOrders: number;
+  redeemOrders: number;
+  activeEvents: number;
+}
+
+export interface DashboardTrends {
+  users: number;
+  revenue: number;
+  products: number;
+  points: number;
+}
+
+export interface DashboardSummary {
+  stats: DashboardStats;
+  trends: DashboardTrends;
+  charts: {
+    transactions: DashboardTransactionChartItem[];
+    userGrowth: DashboardUserGrowthItem[];
+    categories: DashboardCategoryItem[];
+  };
+  topPoints: DashboardTopPoint[];
+  recentTransactions: Transaction[];
+  upcomingEvents: Event[];
 }
 
 export interface AuthState {

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { ChevronDown, User, Settings } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { User as UserType } from "../types";
 import { removeToken } from "@/utils/token";
 
@@ -39,12 +40,13 @@ const Topbar: React.FC<TopbarProps> = ({
   activePage
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const navigate = useNavigate();
   const pageInfo = pageTitles[activePage] || pageTitles.dashboard;
 
   const handleLogout = () => {
-    removeToken()
-    window.location.href = "/login";
-  }
+    removeToken();
+    navigate("/login", { replace: true });
+  };
 
   return (
     <header className="bg-white/80 backdrop-blur-sm border-b border-slate-200 px-4 lg:px-6 py-4 sticky top-0 z-20 shadow-sm">

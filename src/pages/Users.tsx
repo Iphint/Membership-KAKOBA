@@ -12,9 +12,20 @@ import {
 } from "lucide-react";
 import { User as UserType } from "../types";
 import { createUser, deleteUser, getUsers, updateUser } from "@/api/user";
+import Pagination from "@/components/Pagination";
+
+const PAGE_SIZE = 10;
 
 const Users: React.FC = () => {
   const [users, setUsers] = useState<UserType[]>([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    perPage: PAGE_SIZE,
+    totalItems: 0,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("ALL");
   const [showModal, setShowModal] = useState(false);
@@ -29,10 +40,11 @@ const Users: React.FC = () => {
     roles: "USER" as "ADMIN" | "USER",
   });
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (page = pagination.currentPage) => {
     try {
-      const list = await getUsers();
-      setUsers(list);
+      const result = await getUsers(page, PAGE_SIZE);
+      setUsers(result.data);
+      setPagination(result.pagination);
     } catch (err) {
       console.error(err);
       setUsers([]);
@@ -40,7 +52,7 @@ const Users: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(1);
   }, []);
 
   const filtered = users.filter(
@@ -52,7 +64,7 @@ const Users: React.FC = () => {
 
   const openCreate = () => {
     setEditUser(null);
-    resetForm()
+    resetForm();
     setShowModal(true);
   };
 
@@ -93,9 +105,9 @@ const Users: React.FC = () => {
       } else {
         await createUser(payload);
       }
-      await fetchUsers();
+      await fetchUsers(editUser ? pagination.currentPage : 1);
       setShowModal(false);
-      resetForm()
+      resetForm();
     } catch (error) {
       console.error("Error saving user:", error);
     }
@@ -104,7 +116,11 @@ const Users: React.FC = () => {
   const handleDelete = async (id: number) => {
     try {
       await deleteUser(id);
-      setUsers((prev) => prev.filter((u) => u.id !== id));
+      await fetchUsers(
+        users.length === 1
+          ? Math.max(pagination.currentPage - 1, 1)
+          : pagination.currentPage
+      );
       setDeleteId(null);
     } catch (err) {
       console.error(err);
@@ -152,7 +168,7 @@ const Users: React.FC = () => {
         {[
           {
             label: "Total Users",
-            value: users.length,
+            value: pagination.totalItems,
             color: "text-slate-800",
           },
           {
@@ -277,11 +293,11 @@ const Users: React.FC = () => {
             </div>
           )}
         </div>
-        <div className="px-4 py-3 border-t border-slate-100 bg-slate-50">
-          <p className="text-xs text-slate-400">
-            Showing {filtered.length} of {users.length} users
-          </p>
-        </div>
+        <Pagination
+          meta={pagination}
+          itemLabel="users"
+          onPageChange={fetchUsers}
+        />
       </div>
 
       {/* Create/Edit Modal */}
