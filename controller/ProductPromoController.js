@@ -1,5 +1,9 @@
 const ProductPromoModel = require("../models/ProductPromoModel");
 const { notifyAllUsers } = require("../services/NotificationService");
+const {
+  buildPaginationMeta,
+  getPaginationParams,
+} = require("../utils/pagination");
 
 exports.createProductPromo = async (req, res) => {
   try {
@@ -41,10 +45,18 @@ exports.createProductPromo = async (req, res) => {
 };
 exports.getAllProductPromos = async (req, res) => {
   try {
-    const promos = await ProductPromoModel.getAllProductPromos();
+    const paginationParams = getPaginationParams(req.query);
+    const result = await ProductPromoModel.getAllProductPromos(
+      paginationParams
+    );
+
     res.status(200).json({
       message: "Product promos fetched successfully",
-      data: promos,
+      data: result.data,
+      pagination: buildPaginationMeta({
+        ...paginationParams,
+        totalItems: result.totalItems,
+      }),
     });
   } catch (error) {
     res

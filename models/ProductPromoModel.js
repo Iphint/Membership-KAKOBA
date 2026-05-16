@@ -55,14 +55,26 @@ const ProductPromoModel = {
       throw error;
     }
   },
-  getAllProductPromos: async () => {
+  getAllProductPromos: async ({ skip, limit } = {}) => {
     try {
-      const promos = await prisma.productPromo.findMany({
+      const findArgs = {
         include: {
           ImagePromo: true,
         },
-      });
-      return promos;
+        orderBy: { createdAt: "desc" },
+      };
+
+      if (Number.isInteger(skip) && Number.isInteger(limit)) {
+        findArgs.skip = skip;
+        findArgs.take = limit;
+      }
+
+      const [promos, totalItems] = await prisma.$transaction([
+        prisma.productPromo.findMany(findArgs),
+        prisma.productPromo.count(),
+      ]);
+
+      return { data: promos, totalItems };
     } catch (error) {
       console.error("Error fetching all product promos:", error);
       throw error;

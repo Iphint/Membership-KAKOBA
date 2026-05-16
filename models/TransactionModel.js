@@ -1,8 +1,14 @@
 const { PrismaClient } = require("@prisma/client");
-const { get } = require("../routes/TransactionRoutes");
 const redisClient = require("../config/Redis");
 const prisma = new PrismaClient();
 const { v4: uuidv4 } = require("uuid");
+
+const invalidateTransactionCache = async () => {
+  const keys = await redisClient.keys("all_transactions_with_users*");
+  if (keys.length > 0) {
+    await redisClient.del(keys);
+  }
+};
 
 const TransactionModel = {
   createTransaction: async (
@@ -55,11 +61,8 @@ const TransactionModel = {
         return transaction;
       });
 
-      const cacheKeyToInvalidate = "all_transactions_with_users";
-      await redisClient.del(cacheKeyToInvalidate);
-      console.log(
-        `Cache "${cacheKeyToInvalidate}" dihapus setelah transaksi baru dibuat.`
-      );
+      await invalidateTransactionCache();
+      console.log("Cache transaksi dihapus setelah transaksi baru dibuat.");
 
       return result;
     } catch (error) {
@@ -139,7 +142,7 @@ const TransactionModel = {
         }
       );
 
-      await redisClient.del("all_transactions_with_users");
+      await invalidateTransactionCache();
       console.log("Cache invalidated after redeem transaction.");
       return result;
     } catch (error) {
@@ -165,8 +168,10 @@ const TransactionModel = {
       throw error;
     }
   },
-  getAllTransactions: async () => {
-    const cacheKey = "all_transactions_with_users";
+  getAllTransactions: async ({ skip, limit, page } = {}) => {
+    const cacheKey = `all_transactions_with_users:${page || "all"}:${
+      limit || "all"
+    }`;
     const CACHE_EXPIRATION_TIME = 60 * 2;
     try {
       const canchedTransactions = await redisClient.get(cacheKey);
@@ -174,22 +179,36 @@ const TransactionModel = {
         console.log("Mengambil semua transaksi dari cache Redis.");
         return JSON.parse(canchedTransactions);
       }
-      const transactions = await prisma.transaction.findMany({
+      const findArgs = {
         include: {
           user: true,
           items: true,
         },
-      });
+        orderBy: { createdAt: "desc" },
+      };
+
+      if (Number.isInteger(skip) && Number.isInteger(limit)) {
+        findArgs.skip = skip;
+        findArgs.take = limit;
+      }
+
+      const [transactions, totalItems] = await prisma.$transaction([
+        prisma.transaction.findMany(findArgs),
+        prisma.transaction.count(),
+      ]);
+
+      const result = { data: transactions, totalItems };
+
       await redisClient.setex(
         cacheKey,
         CACHE_EXPIRATION_TIME,
-        JSON.stringify(transactions)
+        JSON.stringify(result)
       );
       console.log(
         `Semua transaksi disimpan ke Redis dengan masa berlaku ${CACHE_EXPIRATION_TIME} detik.`
       );
       console.log("Mengambil semua transaksi dari database.");
-      return transactions;
+      return result;
     } catch (error) {
       console.error("Error fetching transactions:", error);
       throw error;
@@ -201,6 +220,7 @@ const TransactionModel = {
         where: { id: parseInt(id) },
         include: {
           user: true,
+          items: true,
         },
       });
       return transaction;
@@ -209,16 +229,31 @@ const TransactionModel = {
       throw error;
     }
   },
-  getTransactionsByUserId: async (user_id) => {
+  getTransactionsByUserId: async (user_id, { skip, limit } = {}) => {
     try {
-      const transactions = await prisma.transaction.findMany({
-        where: { user_id: parseInt(user_id) },
+      const where = { user_id: parseInt(user_id) };
+      const findArgs = {
+        where,
         include: {
           user: true,
           items: true,
         },
-      });
-      return transactions;
+        orderBy: { createdAt: "desc" },
+      };
+
+      if (Number.isInteger(skip) && Number.isInteger(limit)) {
+        findArgs.skip = skip;
+        findArgs.take = limit;
+      }
+
+      const [transactions, totalItems] = await prisma.$transaction([
+        prisma.transaction.findMany(findArgs),
+        prisma.transaction.count({
+          where,
+        }),
+      ]);
+
+      return { data: transactions, totalItems };
     } catch (error) {
       console.error("Error fetching transactions by user ID:", error);
       throw error;
@@ -230,11 +265,8 @@ const TransactionModel = {
         where: { id: parseInt(id) },
         data,
       });
-      const cacheKeyToInvalidate = "all_transactions_with_users";
-      await redisClient.del(cacheKeyToInvalidate);
-      console.log(
-        `Cache "${cacheKeyToInvalidate}" dihapus setelah transaksi updated dibuat.`
-      );
+      await invalidateTransactionCache();
+      console.log("Cache transaksi dihapus setelah transaksi updated dibuat.");
       return updatedTransaction;
     } catch (error) {
       console.error("Error updating transaction:", error);
@@ -247,10 +279,9 @@ const TransactionModel = {
         where: { id: parseInt(id) },
         include: { items: true },
       });
-      const cacheKeyToInvalidate = "all_transactions_with_users";
-      await redisClient.del(cacheKeyToInvalidate);
+      await invalidateTransactionCache();
       console.log(
-        `Cache "${cacheKeyToInvalidate}" dihapus setelah transaksi single delete dibuat.`
+        "Cache transaksi dihapus setelah transaksi single delete dibuat."
       );
       return deletedTransaction;
     } catch (error) {
@@ -261,14 +292,24 @@ const TransactionModel = {
   deleteAllTransactions: async () => {
     try {
       const deletedTransactions = await prisma.transaction.deleteMany();
-      const cacheKeyToInvalidate = "all_transactions_with_users";
-      await redisClient.del(cacheKeyToInvalidate);
+      await invalidateTransactionCache();
       console.log(
-        `Cache "${cacheKeyToInvalidate}" dihapus setelah transaksi delete all dibuat.`
+        "Cache transaksi dihapus setelah transaksi delete all dibuat."
       );
       return deletedTransactions;
     } catch (error) {
       console.error("Error deleting all transactions:", error);
+      throw error;
+    }
+  },
+  getUserById: async (user_id) => {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: parseInt(user_id) },
+      });
+      return user;
+    } catch (error) {
+      console.error("Error fetching user by ID:", error);
       throw error;
     }
   },

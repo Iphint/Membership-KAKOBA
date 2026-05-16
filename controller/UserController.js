@@ -4,6 +4,10 @@ const fs = require("fs");
 const path = require("path");
 const UserModel = require("../models/UserModel");
 const { use } = require("../routes/UserRoutes");
+const {
+  buildPaginationMeta,
+  getPaginationParams,
+} = require("../utils/pagination");
 
 exports.register = async (req, res) => {
   const { username, email, password, roles, no_telp } = req.body;
@@ -198,11 +202,17 @@ exports.deleteUser = async (req, res) => {
 };
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await UserModel.getAllUsers();
+    const paginationParams = getPaginationParams(req.query);
+    const result = await UserModel.getAllUsers(paginationParams);
+
     res.status(200).json({
       status: true,
       message: "Users retrieved successfully",
-      data: users,
+      data: result.data,
+      pagination: buildPaginationMeta({
+        ...paginationParams,
+        totalItems: result.totalItems,
+      }),
     });
   } catch (error) {
     console.error("Error retrieving users:", error);

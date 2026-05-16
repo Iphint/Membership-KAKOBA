@@ -125,10 +125,23 @@ const UserModel = {
       throw error;
     }
   },
-  getAllUsers: async () => {
+  getAllUsers: async ({ skip, limit } = {}) => {
     try {
-      const users = await prisma.user.findMany();
-      return users;
+      const findArgs = {
+        orderBy: { createdAt: "desc" },
+      };
+
+      if (Number.isInteger(skip) && Number.isInteger(limit)) {
+        findArgs.skip = skip;
+        findArgs.take = limit;
+      }
+
+      const [users, totalItems] = await prisma.$transaction([
+        prisma.user.findMany(findArgs),
+        prisma.user.count(),
+      ]);
+
+      return { data: users, totalItems };
     } catch (error) {
       console.error("Error fetching all users:", error);
       throw error;

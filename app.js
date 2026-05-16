@@ -12,6 +12,7 @@ const ProductPromoRoutes = require("./routes/ProductPromoRoutes");
 const PointsRoutes = require("./routes/PointsRoutes");
 const EventsRoutes = require("./routes/EventsRoutes");
 const ImagesViewRoutes = require("./routes/ImageViewsRoutes")
+const DashboardRoutes = require("./routes/DashboardRoutes");
 const path = require("path");
 
 app.use(
@@ -33,6 +34,7 @@ app.use("/api", ProductPromoRoutes);
 app.use("/api", PointsRoutes);
 app.use("/api", EventsRoutes);
 app.use("/api", ImagesViewRoutes);
+app.use("/api", DashboardRoutes);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

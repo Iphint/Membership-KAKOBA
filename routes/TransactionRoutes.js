@@ -1,8 +1,41 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
 const TransactionController = require("../controller/TransactionController");
 const { verifyToken } = require("../middleware/AuthMiddleware");
 const { user, general, admin } = require("../config/Auth");
+
+const receiptUploadDir = "upload-struck/";
+
+const receiptStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    fs.mkdirSync(receiptUploadDir, { recursive: true });
+    cb(null, receiptUploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${file.originalname}`;
+    cb(null, uniqueName);
+  },
+});
+
+const upload = multer({
+  storage: receiptStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExt = [".jpg", ".jpeg", ".png"];
+
+    if (!allowedExt.includes(ext)) {
+      return cb(new Error("Only receipt images are allowed"), false);
+    }
+
+    cb(null, true);
+  },
+});
 
 router.get(
   "/transactions",
@@ -13,8 +46,15 @@ router.get(
 router.post(
   "/transaction",
   verifyToken,
-  general,
+  admin,
   TransactionController.createTransaction
+);
+router.post(
+  "/scan-receipt",
+  verifyToken,
+  admin,
+  upload.single("receipt"),
+  TransactionController.scanReceipt
 );
 router.post(
   "/reedem-transaction",
