@@ -17,16 +17,24 @@ import CategoryFilter from "@/components/CategoryFilter";
 import { RefreshCcw } from "lucide-react-native";
 import axiosInstance, { setAxiosAuthToken } from "../../utils/axiosInstance";
 
+const PAGE_SIZE = 10;
+
 export default function ProductsScreen() {
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    hasNextPage: false,
+  });
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
   const API_URL_IMAGE = process.env.EXPO_PUBLIC_API_URL_IMAGE;
 
-  const fetchDataProducts = async () => {
+  const fetchDataProducts = async (page = 1, shouldAppend = false) => {
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) {
@@ -35,12 +43,23 @@ export default function ProductsScreen() {
       }
       setAxiosAuthToken(token);
 
-      const res = await axiosInstance.get(`${API_URL}/product-promos`);
-      const data = res.data.data;
+      const res = await axiosInstance.get(`${API_URL}/product-promos`, {
+        params: { page, limit: PAGE_SIZE },
+      });
+      const data = res.data.data || [];
       const sortedData = [...data].sort(
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
-      setProducts(sortedData);
+      setProducts((prev) =>
+        shouldAppend ? [...prev, ...sortedData] : sortedData
+      );
+      setPagination(
+        res.data.pagination || {
+          currentPage: page,
+          totalPages: page,
+          hasNextPage: false,
+        }
+      );
     } catch (error) {
       console.error(
         "Error fetching products:",
@@ -48,11 +67,12 @@ export default function ProductsScreen() {
       );
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    fetchDataProducts();
+    fetchDataProducts(1);
   }, []);
 
   const rotation = useRef(new Animated.Value(0)).current;
@@ -126,8 +146,15 @@ export default function ProductsScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     startRefreshAnimation();
-    await fetchDataProducts();
+    await fetchDataProducts(1);
     setRefreshing(false);
+  };
+
+  const loadMoreProducts = async () => {
+    if (loadingMore || refreshing || !pagination.hasNextPage) return;
+
+    setLoadingMore(true);
+    await fetchDataProducts(pagination.currentPage + 1, true);
   };
 
   return (
@@ -163,6 +190,17 @@ export default function ProductsScreen() {
           onRefresh={onRefresh}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
+          onEndReached={loadMoreProducts}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            loadingMore ? (
+              <ActivityIndicator
+                size="small"
+                color={theme.colors.primary}
+                style={styles.loadMore}
+              />
+            ) : null
+          }
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
         />
@@ -184,5 +222,8 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: theme.spacing.xl,
+  },
+  loadMore: {
+    marginVertical: theme.spacing.m,
   },
 });

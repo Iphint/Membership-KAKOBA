@@ -17,16 +17,24 @@ import errorUtils from "../utils/error";
 import LoadingUtils from "../utils/loading";
 import { router } from "expo-router";
 
+const PAGE_SIZE = 10;
+
 export default function TransactionScreen() {
   const user = useUserStore((state) => state.user);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    hasNextPage: false,
+  });
 
   const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-  const getTransactions = async () => {
+  const getTransactions = async (page = 1, shouldAppend = false) => {
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) {
@@ -39,17 +47,29 @@ export default function TransactionScreen() {
       }
 
       setAxiosAuthToken(token);
-      const res = await axiosInstance.get(`/transactions/user/${user.id}`);
-      const data = res.data.data;
+      const res = await axiosInstance.get(`/transactions/user/${user.id}`, {
+        params: { page, limit: PAGE_SIZE },
+      });
+      const data = res.data.data || [];
       const sortedData = [...data].sort(
         (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
       );
-      setTransactions(sortedData);
+      setTransactions((prev) =>
+        shouldAppend ? [...prev, ...sortedData] : sortedData
+      );
+      setPagination(
+        res.data.pagination || {
+          currentPage: page,
+          totalPages: page,
+          hasNextPage: false,
+        }
+      );
     } catch (error) {
       console.warn("Failed to fetch transactions:", error);
       setError(true);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   };
@@ -62,19 +82,26 @@ export default function TransactionScreen() {
   );
 
   useEffect(() => {
-    getTransactions();
+    getTransactions(1);
   }, [API_URL, user]);
 
   const onRefresh = () => {
     setRefreshing(true);
     try {
-      getTransactions();
+      getTransactions(1);
     } catch (error) {
       setError(true);
       setError(error);
     } finally {
       setRefreshing(false);
     }
+  };
+
+  const loadMoreTransactions = async () => {
+    if (loadingMore || refreshing || !pagination.hasNextPage) return;
+
+    setLoadingMore(true);
+    await getTransactions(pagination.currentPage + 1, true);
   };
   const renderTransactionItem = ({ item }) => {
     const isEarn = item.type === "earn";
@@ -174,6 +201,13 @@ export default function TransactionScreen() {
               colors={[theme.colors.primary]}
             />
           }
+          onEndReached={loadMoreTransactions}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            loadingMore ? (
+              <Text style={styles.loadingMoreText}>Loading more...</Text>
+            ) : null
+          }
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
@@ -220,6 +254,12 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: theme.spacing.xl,
+  },
+  loadingMoreText: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+    marginVertical: theme.spacing.m,
   },
   transactionCard: {
     backgroundColor: theme.colors.card,

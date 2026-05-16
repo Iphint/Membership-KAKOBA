@@ -49,8 +49,10 @@ export default function ProfileScreen() {
         }
 
         setAxiosAuthToken(token);
-        const res = await axiosInstance.get(`/transactions/user/${user.id}`);
-        const data = res.data.data;
+        const res = await axiosInstance.get(`/transactions/user/${user.id}`, {
+          params: { page: 1, limit: 5 },
+        });
+        const data = res.data.data || [];
 
         const sortedData = [...data].sort(
           (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
@@ -65,7 +67,7 @@ export default function ProfileScreen() {
     getTransactions();
   }, [API_URL, user]);
 
-  const recentTransactions = transactions?.slice(0, 5) ?? [];
+  const recentTransactions = transactions ?? [];
 
   if (!user) return null;
 
