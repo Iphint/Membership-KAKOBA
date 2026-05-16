@@ -9,7 +9,7 @@ import {
   ScanLine,
 } from "lucide-react";
 
-import { Transaction } from "../types";
+import { Transaction, User } from "../types";
 
 import {
   getTransactions,
@@ -17,6 +17,7 @@ import {
   deleteTransaction,
   scanReceiptTransaction,
 } from "@/api/transaction";
+import { getUsers } from "@/api/user";
 
 import Pagination from "@/components/Pagination";
 
@@ -72,6 +73,10 @@ const Transactions: React.FC = () => {
     emptyItem(),
   ]);
   const [ocrPreview, setOcrPreview] = useState<OcrPreview | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   const [form, setForm] = useState({
     user_id: "",
@@ -95,9 +100,24 @@ const Transactions: React.FC = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      const result = await getUsers(1, 100);
+      setUsers(Array.isArray(result.data) ? result.data : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   React.useEffect(() => {
     fetchTransactions();
   }, []);
+
+  React.useEffect(() => {
+    if (showModal && users.length === 0) {
+      fetchUsers();
+    }
+  }, [showModal, users.length]);
 
   const resetForm = () => {
     setForm({
@@ -110,12 +130,25 @@ const Transactions: React.FC = () => {
     setReceiptFile(null);
     setOcrPreview(null);
     setInputMode("manual");
+    setUserSearch("");
+    setSelectedUser(null);
+    setUserDropdownOpen(false);
+  };
+
+  const selectUser = (user: User) => {
+    setSelectedUser(user);
+    setUserSearch(`${user.username}`);
+    setUserDropdownOpen(false);
+    setForm((prev) => ({
+      ...prev,
+      user_id: String(user.id),
+    }));
   };
 
   const handleCreate = async () => {
     try {
       if (!form.user_id) {
-        alert("User ID wajib diisi");
+        alert("Pilih user terlebih dahulu");
         return;
       }
 
@@ -175,7 +208,7 @@ const Transactions: React.FC = () => {
   const handleScanReceipt = async () => {
     try {
       if (!form.user_id) {
-        alert("User ID wajib diisi");
+        alert("Pilih user terlebih dahulu");
         return;
       }
 
@@ -247,6 +280,18 @@ const Transactions: React.FC = () => {
       (user.includes(q) || itemMatch)
     );
   });
+
+  const filteredUsers = users
+    .filter((user) => {
+      const query = userSearch.toLowerCase().trim();
+
+      if (!query || selectedUser?.id === user.id) return true;
+
+      return [user.username, user.email, user.no_telp, String(user.id)]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(query));
+    })
+    .slice(0, 8);
 
   return (
     <div className="p-4 lg:p-6 space-y-5">
@@ -418,23 +463,77 @@ const Transactions: React.FC = () => {
                 </button>
               </div>
 
-              {/* USER ID */}
+              {/* USER SEARCH */}
               <div>
                 <label className="text-sm font-medium block mb-1">
-                  User ID
+                  User
                 </label>
 
-                <input
-                  placeholder="5"
-                  value={form.user_id}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      user_id: e.target.value,
-                    }))
-                  }
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2.5"
-                />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    placeholder="Cari username, email, atau no telp"
+                    value={userSearch}
+                    onFocus={() => setUserDropdownOpen(true)}
+                    onChange={(e) => {
+                      setUserSearch(e.target.value);
+                      setUserDropdownOpen(true);
+                      setSelectedUser(null);
+                      setForm((prev) => ({
+                        ...prev,
+                        user_id: "",
+                      }));
+                    }}
+                    className="w-full border border-slate-200 rounded-xl pl-10 pr-3 py-2.5"
+                  />
+
+                  {userDropdownOpen && (
+                    <div className="absolute z-20 mt-2 w-full bg-white border border-slate-100 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                      {filteredUsers.length > 0 ? (
+                        filteredUsers.map((user) => (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => selectUser(user)}
+                            className="w-full px-3 py-2.5 text-left hover:bg-orange-50 flex items-center justify-between gap-3"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-slate-700 truncate">
+                                {user.username}
+                              </p>
+                              <p className="text-xs text-slate-400 truncate">
+                                {user.email}
+                              </p>
+                            </div>
+
+                            <span className="text-xs font-semibold text-orange-500 bg-orange-50 rounded-lg px-2 py-1 flex-shrink-0">
+                              #{user.id}
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-4 text-center text-sm text-slate-400">
+                          User tidak ditemukan
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {selectedUser && (
+                  <div className="mt-2 rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs text-slate-400">Selected user</p>
+                      <p className="text-sm font-semibold text-slate-700 truncate">
+                        {selectedUser.username}
+                      </p>
+                    </div>
+
+                    <span className="text-xs font-semibold text-slate-500 flex-shrink-0">
+                      user_id: {selectedUser.id}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* MANUAL */}
@@ -664,6 +763,7 @@ const Transactions: React.FC = () => {
                 onClick={handleCreate}
                 disabled={
                   loading ||
+                  !form.user_id ||
                   (inputMode === "ocr" &&
                     (!ocrPreview?.items || ocrPreview.items.length === 0))
                 }

@@ -61,13 +61,13 @@ const StatCard = ({
     <div className="flex items-start justify-between gap-3">
       <div className="flex-1 min-w-0">
         <p className="text-sm text-slate-500 font-medium">{title}</p>
-        <p className="text-2xl lg:text-3xl font-bold text-slate-800 mt-1 break-words">
+        <p className="text-2xl lg:text-3xl font-bold text-slate-800 mt-1 wrap-break-word">
           {value}
         </p>
         {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
       </div>
       <div
-        className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${color}`}
+        className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${color}`}
       >
         <Icon className="w-6 h-6 text-white" />
       </div>
@@ -332,7 +332,7 @@ const Dashboard: React.FC = () => {
                   <div key={item.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0">
                       <div
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
                         style={{ backgroundColor: COLORS[i % COLORS.length] }}
                       />
                       <span className="text-xs text-slate-600 truncate">
@@ -405,7 +405,7 @@ const Dashboard: React.FC = () => {
             {topPoints.length > 0 ? (
               topPoints.map((item, i) => (
                 <div key={item.id} className="flex items-center gap-3">
-                  <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-500 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                  <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-500 text-xs font-bold flex items-center justify-center shrink-0">
                     {i + 1}
                   </span>
                   <div className="flex-1 min-w-0">
@@ -419,7 +419,7 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-1.5">
                       <div
-                        className="bg-gradient-to-r from-orange-400 to-orange-600 h-1.5 rounded-full transition-all"
+                        className="bg-linear-to-r from-orange-400 to-orange-600 h-1.5 rounded-full transition-all"
                         style={{ width: `${(item.points / maxPoint) * 100}%` }}
                       />
                     </div>
@@ -442,7 +442,7 @@ const Dashboard: React.FC = () => {
               recentTransactions.map((tx) => (
                 <div key={tx.id} className="flex items-center gap-3">
                   <div
-                    className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                       tx.type === "redeem" ? "bg-purple-100" : "bg-orange-100"
                     }`}
                   >
@@ -458,7 +458,7 @@ const Dashboard: React.FC = () => {
                     </p>
                     <p className="text-xs text-slate-400">{tx.username}</p>
                   </div>
-                  <div className="text-right flex-shrink-0">
+                  <div className="text-right shrink-0">
                     <p
                       className={`text-xs font-bold ${
                         tx.type === "redeem"
@@ -492,7 +492,7 @@ const Dashboard: React.FC = () => {
                   key={event.id}
                   className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl"
                 >
-                  <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <div className="w-10 h-10 bg-linear-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
                     <Calendar className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -518,7 +518,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-5 shadow-sm">
+        <div className="bg-linear-to-br from-slate-900 to-slate-800 rounded-2xl p-5 shadow-sm">
           <h3 className="font-bold text-white mb-4">Platform Overview</h3>
           <div className="grid grid-cols-2 gap-3">
             {[
